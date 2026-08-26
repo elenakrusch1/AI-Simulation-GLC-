@@ -27,28 +27,33 @@ something unspecified.
 Requires Docker and Docker Compose.
 
 ```bash
-cp .env.example .env      # optional — compose has sane defaults
+cp .env.example .env
+# edit .env: set ADMIN_LOGIN_IDENTIFIER and ADMIN_PASSWORD (12+ chars,
+# a letter and a number) to get an admin account automatically
 docker compose up --build
 ```
 
 This starts a PostgreSQL 16 container and the app container. On boot,
-the app container automatically runs `prisma migrate deploy` (safe to
-re-run — it only applies pending migrations) before starting the
-server. The app is available at <http://localhost:3000> once both
-containers report healthy.
+the app container automatically runs, in order: `prisma migrate
+deploy` (safe to re-run — only applies pending migrations), seeds
+reference data (rounds, customers, technical solutions, commercial
+models — **no scoring values**), and — if `ADMIN_LOGIN_IDENTIFIER`
+and `ADMIN_PASSWORD` are both set — creates or resets that admin
+account. All three steps are upserts, safe on every restart/redeploy.
+The app is available at <http://localhost:3000> once both containers
+report healthy.
 
-Seed reference data (rounds, customers, technical solutions,
-commercial models — **no scoring values**) and create the first admin:
+If you didn't set the admin env vars up front, you can still create
+one after the fact:
 
 ```bash
-docker compose exec app node node_modules/.bin/tsx prisma/seed.ts
 docker compose exec -e ADMIN_LOGIN_IDENTIFIER=admin@example.com \
                     -e ADMIN_PASSWORD='choose-a-strong-password-12+' \
                     app node node_modules/.bin/tsx scripts/seed-admin.ts
 ```
 
-(`seed:admin` is safe to re-run — it resets that identifier's password,
-which is also how you recover admin access later.)
+(safe to re-run — it resets that identifier's password, which is also
+how you recover admin access later.)
 
 ## Local development without Docker
 
@@ -82,23 +87,36 @@ Useful scripts (see `package.json`):
 ## Creating the first administrator
 
 There is no public registration for the admin role (teams register
-themselves at `/register` — see below). The only way to create an
-admin account is `scripts/seed-admin.ts`:
+themselves at `/register` — see below). An admin account is created
+in one of two ways:
 
-```bash
-# Non-interactive (env vars) — ideal for docker exec / CI:
-ADMIN_LOGIN_IDENTIFIER=admin@example.com ADMIN_PASSWORD='...' npm run seed:admin
+- **Automatically on container boot** — set `ADMIN_LOGIN_IDENTIFIER`
+  and `ADMIN_PASSWORD` in the environment the container runs with
+  (Docker Compose `.env`, or your host's environment-variable
+  settings) and `docker-entrypoint.sh` runs `scripts/seed-admin.ts`
+  for you on every start. This is the recommended path for anything
+  you deploy/host — it means the admin account exists the moment the
+  app comes up, with no manual `exec` step.
+- **Manually, via `scripts/seed-admin.ts`** — for local development,
+  one-off password resets, or platforms where you'd rather not put
+  credentials in long-lived environment variables:
 
-# Interactive (prompts for both, password input is not echoed):
-npm run seed:admin
-```
+  ```bash
+  # Non-interactive (env vars) — ideal for docker exec / CI:
+  ADMIN_LOGIN_IDENTIFIER=admin@example.com ADMIN_PASSWORD='...' npm run seed:admin
 
-It never uses a hardcoded default password — one must always be
-supplied, and it's validated against the same password policy used
-everywhere else in the app (12+ characters, at least one letter and
-one number). Re-running it for an identifier that already exists
-resets that account's password and reactivates it, which doubles as
-the account-recovery path.
+  # Interactive (prompts for both, password input is not echoed):
+  npm run seed:admin
+  ```
+
+Either way, it never uses a hardcoded default password — one must
+always be supplied, and it's validated against the same password
+policy used everywhere else in the app (12+ characters, at least one
+letter and one number). Re-running it (whether via the entrypoint on
+every boot, or by hand) for an identifier that already exists resets
+that account's password and reactivates it, which doubles as the
+account-recovery path — just redeploy/restart with the env vars set,
+or run the script again.
 
 Team accounts are self-registered at `/register` — a team picks a
 team name and a team code (no password) and is signed in immediately.
@@ -137,17 +155,17 @@ tears it down afterward.
 3. **Set environment variables** on the service:
    - `DATABASE_URL` — the connection string from step 1.
    - `NODE_ENV=production`
+   - `ADMIN_LOGIN_IDENTIFIER` and `ADMIN_PASSWORD` — set these and an
+     admin account is created automatically on every boot (see
+     "Creating the first administrator" above); omit them and create
+     one later via `koyeb service exec` instead.
    - Koyeb sets `PORT` for you; the app reads it (defaults to 3000).
-4. **Deploy.** On boot, `docker-entrypoint.sh` runs
-   `prisma migrate deploy` against `DATABASE_URL`, then starts the
-   server bound to `0.0.0.0:$PORT`. No interactive step is required.
-5. **Seed reference data and the first admin**, once, via Koyeb's
-   one-off/exec command feature (or `koyeb service exec`):
-   ```bash
-   node node_modules/.bin/tsx prisma/seed.ts
-   ADMIN_LOGIN_IDENTIFIER=... ADMIN_PASSWORD=... node node_modules/.bin/tsx scripts/seed-admin.ts
-   ```
-6. **Health check.** Point Koyeb's health check at `/api/health` (also
+4. **Deploy.** On boot, `docker-entrypoint.sh` runs `prisma migrate
+   deploy`, seeds reference data, and (if the admin env vars above are
+   set) creates/resets that admin account — all against `DATABASE_URL`
+   — before starting the server bound to `0.0.0.0:$PORT`. No
+   interactive or manual step is required.
+5. **Health check.** Point Koyeb's health check at `/api/health` (also
    used by the Docker `HEALTHCHECK` already baked into the image).
 
 The app is proxy-aware: cookies are `Secure` whenever

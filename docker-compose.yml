@@ -31,6 +31,14 @@ services:
       PORT: 3000
       DATABASE_URL: postgresql://${POSTGRES_USER:-dcsim}:${POSTGRES_PASSWORD:-dcsim_dev_password}@db:5432/${POSTGRES_DB:-dcsim}?schema=public
       SESSION_COOKIE_NAME: ${SESSION_COOKIE_NAME:-dcsim_session}
+      # Optional — set both in .env to get an admin account created
+      # automatically on every boot (see docker-entrypoint.sh and the
+      # "Creating the first administrator" section of the README).
+      # Left unset here (rather than defaulted), so an empty/unset
+      # .env value correctly disables auto-creation instead of passing
+      # empty strings through.
+      ADMIN_LOGIN_IDENTIFIER: ${ADMIN_LOGIN_IDENTIFIER:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
     ports:
       - "${APP_PORT:-3000}:3000"
 
