@@ -18,6 +18,7 @@ something unspecified.
 - [Creating the first administrator](#creating-the-first-administrator)
 - [Running the tests](#running-the-tests)
 - [Deploying to Koyeb](#deploying-to-koyeb)
+- [Deploying to Render](#deploying-to-render)
 - [Architecture](#architecture)
 - [Security notes](#security-notes)
 - [Scoring model](#scoring-model)
@@ -177,6 +178,36 @@ case (a single public hostname). If you front the service with an
 additional custom domain/proxy that rewrites the `Host` header, see
 Next's `experimental.serverActions.allowedOrigins` in
 `next.config.ts`.
+
+## Deploying to Render
+
+The repo ships a [`render.yaml`](./render.yaml) blueprint that
+provisions a managed Postgres and a Docker web service, and wires
+`DATABASE_URL` from the database automatically — so you never paste a
+connection string by hand.
+
+1. **Blueprint deploy.** Render Dashboard → **New** → **Blueprint** →
+   pick this repository. Render creates `dcsim-db` and `dcsim` from
+   `render.yaml`.
+2. **Set the admin secrets** (marked `sync: false`, so they are not in
+   the file): on the `dcsim` service, add `ADMIN_LOGIN_IDENTIFIER` and
+   `ADMIN_PASSWORD`. With both set, an admin account is created/reset
+   on every boot (see "Creating the first administrator"). Omit them to
+   create one later via the service shell.
+3. **Deploy.** On boot, `docker-entrypoint.sh` runs `prisma migrate
+   deploy`, seeds reference data, and starts the server. Health check
+   is already pointed at `/api/health` by the blueprint.
+
+**Already created the service by hand and hit `P1001: Can't reach
+database server at 127.0.0.1:5432`?** `DATABASE_URL` is set to a local
+value. Fix it one of two ways:
+
+- Open the service → **Settings** → **Sync from render.yaml** (adopts
+  the `dcsim-db` reference above), or
+- Create a Render PostgreSQL instance and set `DATABASE_URL` on the
+  service to its **Internal Database URL** (Dashboard → the database →
+  *Connections*). Keep the database and the web service in the **same
+  region** — a cross-region internal URL fails the same way.
 
 ## Architecture
 
