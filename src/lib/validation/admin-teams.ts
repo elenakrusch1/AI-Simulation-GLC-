@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { passwordPolicySchema } from "@/lib/validation/password-policy";
+
+// teamCodeSchema/teamNameSchema are shared by public self-registration
+// (src/app/register) and admin-side team editing (src/app/admin/teams)
+// — teams have no password (see src/lib/data/teams.ts).
 
 const teamCodeSchema = z
   .string()
@@ -16,10 +19,9 @@ const teamNameSchema = z
 
 const idSchema = z.string().uuid("Invalid identifier");
 
-export const createTeamSchema = z.object({
+export const registerTeamSchema = z.object({
   name: teamNameSchema,
   code: teamCodeSchema,
-  password: passwordPolicySchema,
 });
 
 export const updateTeamSchema = z.object({
@@ -28,15 +30,10 @@ export const updateTeamSchema = z.object({
   code: teamCodeSchema,
 });
 
-export const resetTeamPasswordSchema = z.object({
-  teamId: idSchema,
-  password: passwordPolicySchema,
-});
-
 export const setTeamActiveSchema = z.object({
   teamId: idSchema,
   active: z.enum(["true", "false"]).transform((v) => v === "true"),
 });
 
-export type CreateTeamInput = z.infer<typeof createTeamSchema>;
+export type RegisterTeamInput = z.infer<typeof registerTeamSchema>;
 export type UpdateTeamInput = z.infer<typeof updateTeamSchema>;

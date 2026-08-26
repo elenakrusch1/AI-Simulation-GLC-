@@ -5,19 +5,8 @@ import { Prisma } from "@prisma/client";
 import { requireAdmin } from "@/lib/auth/guards";
 import { writeAuditLog } from "@/lib/audit";
 import { collectFieldErrors } from "@/lib/form-errors";
-import {
-  createTeam,
-  updateTeam,
-  setTeamActive,
-  resetTeamPassword,
-  getTeamForAdmin,
-} from "@/lib/data/teams";
-import {
-  createTeamSchema,
-  updateTeamSchema,
-  resetTeamPasswordSchema,
-  setTeamActiveSchema,
-} from "@/lib/validation/admin-teams";
+import { updateTeam, setTeamActive, getTeamForAdmin } from "@/lib/data/teams";
+import { updateTeamSchema, setTeamActiveSchema } from "@/lib/validation/admin-teams";
 
 export interface TeamFormState {
   fieldErrors?: Record<string, string>;
@@ -27,39 +16,6 @@ export interface TeamFormState {
 
 function isUniqueConstraintError(error: unknown): boolean {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
-}
-
-export async function createTeamAction(
-  _prevState: TeamFormState,
-  formData: FormData,
-): Promise<TeamFormState> {
-  const admin = await requireAdmin();
-
-  const parsed = createTeamSchema.safeParse({
-    name: formData.get("name"),
-    code: formData.get("code"),
-    password: formData.get("password"),
-  });
-  if (!parsed.success) return { fieldErrors: collectFieldErrors(parsed.error) };
-
-  try {
-    const team = await createTeam(parsed.data);
-    await writeAuditLog({
-      userId: admin.userId,
-      action: "TEAM_CREATED",
-      entityType: "Team",
-      entityId: team.id,
-      newValue: { name: team.name, code: team.code, active: team.active },
-    });
-  } catch (error) {
-    if (isUniqueConstraintError(error)) {
-      return { formError: "That team code is already in use. Choose a different one." };
-    }
-    throw error;
-  }
-
-  revalidatePath("/admin/teams");
-  return { success: `Team "${parsed.data.name}" created.` };
 }
 
 export async function updateTeamAction(
@@ -97,31 +53,6 @@ export async function updateTeamAction(
 
   revalidatePath("/admin/teams");
   return { success: "Team updated." };
-}
-
-export async function resetTeamPasswordAction(
-  _prevState: TeamFormState,
-  formData: FormData,
-): Promise<TeamFormState> {
-  const admin = await requireAdmin();
-
-  const parsed = resetTeamPasswordSchema.safeParse({
-    teamId: formData.get("teamId"),
-    password: formData.get("password"),
-  });
-  if (!parsed.success) return { fieldErrors: collectFieldErrors(parsed.error) };
-
-  const team = await resetTeamPassword(parsed.data.teamId, parsed.data.password);
-  await writeAuditLog({
-    userId: admin.userId,
-    action: "TEAM_PASSWORD_RESET",
-    entityType: "Team",
-    entityId: team.id,
-    reason: "Password reset by admin; all sessions for this team were revoked.",
-  });
-
-  revalidatePath("/admin/teams");
-  return { success: "Password reset. The team has been signed out everywhere." };
 }
 
 export async function setTeamActiveAction(formData: FormData): Promise<void> {

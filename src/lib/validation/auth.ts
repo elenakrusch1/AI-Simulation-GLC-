@@ -1,15 +1,14 @@
 import { z } from "zod";
 
+// Teams have no password — the team code is both the identifier and
+// the sole credential (see src/lib/data/teams.ts and
+// src/app/login/actions.ts).
 export const teamLoginSchema = z.object({
   teamCode: z
     .string()
     .trim()
     .min(1, "Team code is required")
     .max(100, "Team code is too long"),
-  password: z
-    .string()
-    .min(1, "Password is required")
-    .max(200, "Password is too long"),
 });
 
 export const adminLoginSchema = z.object({

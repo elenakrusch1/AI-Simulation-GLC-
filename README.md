@@ -81,8 +81,9 @@ Useful scripts (see `package.json`):
 
 ## Creating the first administrator
 
-There is **no public registration** for either role. The only way to
-create an admin account is `scripts/seed-admin.ts`:
+There is no public registration for the admin role (teams register
+themselves at `/register` — see below). The only way to create an
+admin account is `scripts/seed-admin.ts`:
 
 ```bash
 # Non-interactive (env vars) — ideal for docker exec / CI:
@@ -99,8 +100,12 @@ one number). Re-running it for an identifier that already exists
 resets that account's password and reactivates it, which doubles as
 the account-recovery path.
 
-Team accounts are created from `/admin/teams` by a signed-in admin —
-there is no CLI for these, and no public registration either.
+Team accounts are self-registered at `/register` — a team picks a
+team name and a team code (no password) and is signed in immediately.
+The team code is the only credential; there is nothing else to
+remember or reset. `/admin/teams` lets a signed-in admin view
+existing teams, edit their name/code, and deactivate/reactivate
+access, but no longer creates accounts or resets passwords.
 
 ## Running the tests
 
@@ -230,9 +235,12 @@ invented anywhere in this codebase. An admin defines a
 `ScoringModelVersion` (starts `DRAFT`), adds `ScoringRule` rows to it
 from `/admin/scoring`, and activates it (only one version may be
 `ACTIVE` at a time; a partial unique index on `ScoringModelVersion`
-backstops this in the database, not just in application code).
-`/admin/results` can then recalculate `ScoreResult`/`ScoreBreakdown`
-rows for a round from whichever model is active. See the comment
+backstops this in the database, not just in application code). An
+`ACTIVE` version can also be sent back to `DRAFT` from its detail page
+to edit its rules again — while no version is `ACTIVE`, results
+calculate to zero. `/admin/results` can then recalculate
+`ScoreResult`/`ScoreBreakdown` rows for **Round 2** (the only round
+that is ever scored) from whichever model is active. See the comment
 block at the top of `src/lib/scoring-rules.ts` for exactly how a
 rule's fields are matched against a team's decisions.
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import Link from "next/link";
 import { Field } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
 import { loginTeamAction, loginAdminAction, type LoginFormState } from "@/app/login/actions";
@@ -61,14 +62,6 @@ export function LoginForm() {
             required
             error={teamState.fieldErrors?.teamCode}
           />
-          <Field
-            label="Password"
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            required
-            error={teamState.fieldErrors?.password}
-          />
           {teamState.formError ? (
             <p className="rounded-md bg-status-danger-bg px-3 py-2 text-sm text-status-danger" role="alert">
               {teamState.formError}
@@ -77,6 +70,12 @@ export function LoginForm() {
           <Button type="submit" disabled={teamPending} className="mt-2 w-full">
             {teamPending ? "Signing in…" : "Sign in as team"}
           </Button>
+          <p className="text-center text-sm text-brand-700">
+            New team?{" "}
+            <Link href="/register" className="font-semibold text-brand-800 hover:underline">
+              Register now
+            </Link>
+          </p>
         </form>
       ) : (
         <form action={adminFormAction} className="flex flex-col gap-4" noValidate>

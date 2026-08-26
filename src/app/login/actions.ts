@@ -16,11 +16,11 @@ export interface LoginFormState {
   formError?: string;
 }
 
-// Identical wording regardless of which check failed (unknown team
-// code / wrong password / inactive team / locked account) so a login
-// attempt can never be used to enumerate valid team codes or admin
-// identifiers.
-const GENERIC_INVALID_CREDENTIALS = "Invalid team code or password.";
+// Identical wording regardless of which check failed (unknown/
+// inactive team, or wrong admin password/locked admin account) so a
+// login attempt can never be used to enumerate valid team codes or
+// admin identifiers.
+const GENERIC_INVALID_TEAM_CODE = "Invalid team code.";
 const GENERIC_INVALID_ADMIN_CREDENTIALS = "Invalid email/username or password.";
 
 async function requestMeta() {
@@ -37,43 +37,27 @@ export async function loginTeamAction(
 ): Promise<LoginFormState> {
   const parsed = teamLoginSchema.safeParse({
     teamCode: formData.get("teamCode"),
-    password: formData.get("password"),
   });
 
   if (!parsed.success) {
     return { fieldErrors: collectFieldErrors(parsed.error) };
   }
 
-  const { teamCode, password } = parsed.data;
+  const { teamCode } = parsed.data;
 
+  // Teams have no password — the team code is the sole credential.
+  // There is deliberately no rate-limiting/lockout here (nothing to
+  // guess a password against); the team code itself is the secret,
+  // chosen by the team at registration.
   const team = await prisma.team.findUnique({
     where: { code: teamCode },
     include: { user: true },
   });
 
-  const user = team?.user ?? null;
-
-  if (!user || user.role !== "TEAM") {
-    await verifyPassword(password, null);
-    return { formError: GENERIC_INVALID_CREDENTIALS };
+  if (!team || team.user.role !== "TEAM" || !team.user.active || !team.active) {
+    return { formError: GENERIC_INVALID_TEAM_CODE };
   }
-
-  if (isAccountLocked(user)) {
-    // Still compare against the real hash so timing doesn't
-    // distinguish "locked" from "wrong password".
-    await verifyPassword(password, user.passwordHash);
-    return { formError: GENERIC_INVALID_CREDENTIALS };
-  }
-
-  const passwordOk = await verifyPassword(password, user.passwordHash);
-  if (!passwordOk) {
-    await recordFailedLogin(user.id, user.failedLoginCount);
-    return { formError: GENERIC_INVALID_CREDENTIALS };
-  }
-
-  if (!user.active || !team || !team.active) {
-    return { formError: GENERIC_INVALID_CREDENTIALS };
-  }
+  const user = team.user;
 
   await recordSuccessfulLogin(user.id);
   const meta = await requestMeta();
