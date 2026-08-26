@@ -14,7 +14,9 @@ export interface RecalculateState {
   success?: string;
 }
 
-const recalculateSchema = z.object({ roundSlug: z.enum(["round-1", "round-2"]) });
+// Only Round 2 is ever scored — see AddScoringRuleForm.tsx, which
+// only ever creates round-2 rules.
+const recalculateSchema = z.object({ roundSlug: z.literal("round-2") });
 
 export async function recalculateRoundAction(
   _prevState: RecalculateState,

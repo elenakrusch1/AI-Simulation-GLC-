@@ -21,14 +21,13 @@ export default async function AdminResultsPage() {
       <div>
         <h1 className="text-xl font-bold text-brand-950">Results</h1>
         <p className="mt-1 text-brand-700">
-          Inspect team submissions and calculated scores. Scores are
-          calculated from the currently ACTIVE scoring model and are never
-          shown to teams.
+          Inspect team submissions and calculated scores. Only Round 2 is
+          scored. Scores are calculated from the currently ACTIVE scoring
+          model and are never shown to teams.
         </p>
       </div>
 
       <div className="flex flex-wrap gap-3">
-        <RecalculateButton roundSlug="round-1" label="Recalculate Round 1 scores" />
         <RecalculateButton roundSlug="round-2" label="Recalculate Round 2 scores" />
         {/* Plain <a>, not <Link>: this is a file download from a Route
             Handler, not a page navigation. */}
@@ -47,7 +46,6 @@ export default async function AdminResultsPage() {
             <tr className="border-b border-slate-300 text-brand-700">
               <th className="px-4 py-3 font-semibold">Team</th>
               <th className="px-4 py-3 font-semibold">Round 1 status</th>
-              <th className="px-4 py-3 font-semibold">Round 1 score</th>
               <th className="px-4 py-3 font-semibold">Round 2 status</th>
               <th className="px-4 py-3 font-semibold">Round 2 score</th>
               <th className="px-4 py-3 font-semibold" />
@@ -56,7 +54,7 @@ export default async function AdminResultsPage() {
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-brand-700">
+                <td colSpan={5} className="px-4 py-6 text-center text-brand-700">
                   No teams yet.
                 </td>
               </tr>
@@ -65,7 +63,6 @@ export default async function AdminResultsPage() {
                 <tr key={row.teamId} className="border-b border-slate-100">
                   <td className="px-4 py-3 font-semibold text-brand-950">{row.teamName}</td>
                   <td className="px-4 py-3">{statusCell(row.round1Status)}</td>
-                  <td className="px-4 py-3 text-brand-950">{row.round1Score ?? "—"}</td>
                   <td className="px-4 py-3">{statusCell(row.round2Status)}</td>
                   <td className="px-4 py-3 text-brand-950">{row.round2Score ?? "—"}</td>
                   <td className="px-4 py-3">

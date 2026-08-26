@@ -6,7 +6,7 @@ import { recalculateRoundAction, type RecalculateState } from "@/app/admin/resul
 
 const initialState: RecalculateState = {};
 
-export function RecalculateButton({ roundSlug, label }: { roundSlug: "round-1" | "round-2"; label: string }) {
+export function RecalculateButton({ roundSlug, label }: { roundSlug: "round-2"; label: string }) {
   const [state, formAction, pending] = useActionState(recalculateRoundAction, initialState);
   return (
     <form action={formAction} className="flex flex-col items-start gap-2">
