@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+@theme {
+  /* Corporate palette: dark blue nav/headings, white content, restrained
+     cyan/green/orange status accents. Kept as design tokens so status
+     colors are used consistently (never to encode scoring/ranking). */
+  --color-brand-950: #0a1a33;
+  --color-brand-900: #0f2547;
+  --color-brand-800: #143463;
+  --color-brand-700: #1c4685;
+  --color-brand-600: #2a5aa8;
+  --color-brand-500: #3d72c9;
+  --color-brand-100: #e6edf8;
+  --color-brand-50: #f4f7fc;
+
+  --color-status-open: #0e9f6e;
+  --color-status-open-bg: #e6f9f1;
+  --color-status-closed: #b45309;
+  --color-status-closed-bg: #fdf1e0;
+  --color-status-locked: #64748b;
+  --color-status-locked-bg: #eef1f5;
+  --color-status-draft: #0891b2;
+  --color-status-draft-bg: #e3f6fa;
+  --color-status-submitted: #1c4685;
+  --color-status-submitted-bg: #e6edf8;
+  --color-status-danger: #b91c1c;
+  --color-status-danger-bg: #fdeaea;
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    Helvetica, Arial, sans-serif;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background-color: var(--color-brand-50);
+  color: var(--color-brand-950);
+  font-family: var(--font-sans);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-brand-600);
+  outline-offset: 2px;
+}
