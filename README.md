@@ -110,13 +110,14 @@ in one of two ways:
   ```
 
 Either way, it never uses a hardcoded default password — one must
-always be supplied, and it's validated against the same password
-policy used everywhere else in the app (12+ characters, at least one
-letter and one number). Re-running it (whether via the entrypoint on
-every boot, or by hand) for an identifier that already exists resets
-that account's password and reactivates it, which doubles as the
-account-recovery path — just redeploy/restart with the env vars set,
-or run the script again.
+always be supplied, and it's validated against the password policy in
+`src/lib/validation/password-policy.ts` (currently just a 4-character
+minimum — deliberately relaxed for this project; see the comment
+there before tightening it back up). Re-running it (whether via the
+entrypoint on every boot, or by hand) for an identifier that already
+exists resets that account's password and reactivates it, which
+doubles as the account-recovery path — just redeploy/restart with the
+env vars set, or run the script again.
 
 Team accounts are self-registered at `/register` — a team picks a
 team name and a team code (no password) and is signed in immediately.
