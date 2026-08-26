@@ -1,6 +1,29 @@
 #!/bin/sh
 set -e
 
+# Pre-flight: DATABASE_URL must point at a real, reachable Postgres.
+# The most common deploy mistake is pasting the local/dev value into
+# the hosting platform's env vars, which otherwise surfaces a few
+# lines down as an opaque "P1001: Can't reach database server".
+if [ -z "$DATABASE_URL" ]; then
+  echo "[entrypoint] ERROR: DATABASE_URL is not set. Set it to your Postgres" >&2
+  echo "[entrypoint]        connection string (on Render: the database's Internal" >&2
+  echo "[entrypoint]        Database URL, or use the render.yaml blueprint) and redeploy." >&2
+  exit 1
+fi
+
+case "$DATABASE_URL" in
+  *@localhost:*|*@127.0.0.1:*|*@[::1]:*|*@db:*)
+    echo "[entrypoint] NOTE: DATABASE_URL points at a local host (localhost /"
+    echo "[entrypoint]       127.0.0.1 / the docker-compose 'db' service). That is"
+    echo "[entrypoint]       correct for 'docker compose up' but WRONG on a hosting"
+    echo "[entrypoint]       platform: there that address is THIS container, so the"
+    echo "[entrypoint]       next step will fail with 'P1001: Can't reach database"
+    echo "[entrypoint]       server'. On Render, set DATABASE_URL to the Postgres"
+    echo "[entrypoint]       Internal Database URL (or apply render.yaml)."
+    ;;
+esac
+
 echo "[entrypoint] Applying database migrations..."
 node node_modules/.bin/prisma migrate deploy
 

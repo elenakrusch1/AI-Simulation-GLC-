@@ -1,0 +1,58 @@
+# Render Blueprint — https://render.com/docs/blueprint-spec
+#
+# Why this file exists: the #1 deploy failure for this app is setting
+# DATABASE_URL by hand to a local/dev value (e.g.
+# postgresql://...@127.0.0.1:5432/dcsim). Inside a Render container
+# 127.0.0.1 is the container itself, so `prisma migrate deploy` in
+# docker-entrypoint.sh fails with "P1001: Can't reach database server".
+#
+# This blueprint provisions a managed Postgres and injects its
+# connection string into DATABASE_URL automatically (`fromDatabase`),
+# so there is nothing to copy and nothing to get wrong.
+#
+# Apply it either way:
+#   - New:      Render Dashboard -> New -> Blueprint -> pick this repo.
+#   - Existing: open your service -> Settings -> "Sync from render.yaml"
+#               (this replaces the hand-set DATABASE_URL with the
+#               database reference below).
+#
+# IMPORTANT: keep `region` identical on the database and the service.
+# Cross-region internal connections do not work; a mismatch reproduces
+# the same P1001 error.
+
+databases:
+  - name: dcsim-db
+    databaseName: dcsim
+    user: dcsim
+    region: frankfurt        # match the service below
+    plan: free               # bump to basic-256mb+ for anything real
+                             # (the free database is deleted after 30 days)
+
+services:
+  - type: web
+    name: dcsim
+    runtime: docker
+    region: frankfurt        # match the database above
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health   # also the image's own HEALTHCHECK
+    envVars:
+      # The actual fix: DATABASE_URL comes from the database service,
+      # not from a hand-entered value.
+      - key: DATABASE_URL
+        fromDatabase:
+          name: dcsim-db
+          property: connectionString
+      - key: NODE_ENV
+        value: production
+      # Render sets PORT itself; server.js already reads it.
+      #
+      # Set these two in the Render dashboard (marked `sync: false` so
+      # they are NOT stored in this file). With both set, an admin
+      # account is created/reset on every boot — see
+      # docker-entrypoint.sh and the README. Omit them to skip that.
+      - key: ADMIN_LOGIN_IDENTIFIER
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
