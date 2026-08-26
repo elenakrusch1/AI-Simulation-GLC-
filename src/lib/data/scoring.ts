@@ -107,6 +107,24 @@ export async function archiveScoringModelVersion(id: string) {
   });
 }
 
+/**
+ * ACTIVE -> DRAFT, so its rules can be edited again. Existing
+ * ScoreResults/breakdowns from while it was active are left as-is
+ * (they simply won't be updated by a Recalculate until this version
+ * is activated again) — until then, no version is ACTIVE, so
+ * recalculateRoundScores refuses to run (see below).
+ */
+export async function revertScoringModelVersionToDraft(id: string) {
+  const version = await prisma.scoringModelVersion.findUniqueOrThrow({ where: { id } });
+  if (version.status !== "ACTIVE") {
+    throw new ScoringRuleError("Only an ACTIVE scoring model version can be reverted to draft.");
+  }
+  return prisma.scoringModelVersion.update({
+    where: { id },
+    data: { status: "DRAFT", activatedAt: null },
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Calculation
 // ---------------------------------------------------------------------------

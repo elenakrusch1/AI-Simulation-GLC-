@@ -11,28 +11,18 @@ test.describe("route guards", () => {
 });
 
 test.describe("team login", () => {
-  test("wrong password and a nonexistent team code show the identical generic error", async ({
-    page,
-  }) => {
-    await page.goto("/login");
-    await page.getByLabel("Team code").fill(E2E_TEAM.code);
-    await page.getByLabel("Password").fill("definitely-wrong");
-    await page.getByRole("button", { name: "Sign in as team" }).click();
-    await expect(page.getByText("Invalid team code or password.")).toBeVisible();
-
+  test("a nonexistent team code shows a generic error", async ({ page }) => {
     await page.goto("/login");
     await page.getByLabel("Team code").fill("NO-SUCH-TEAM-CODE");
-    await page.getByLabel("Password").fill("whatever12345");
     await page.getByRole("button", { name: "Sign in as team" }).click();
-    await expect(page.getByText("Invalid team code or password.")).toBeVisible();
+    await expect(page.getByText("Invalid team code.")).toBeVisible();
   });
 
-  test("a correct login reaches /team and a team session cannot reach /admin", async ({
+  test("a correct team code reaches /team and a team session cannot reach /admin", async ({
     page,
   }) => {
     await page.goto("/login");
     await page.getByLabel("Team code").fill(E2E_TEAM.code);
-    await page.getByLabel("Password").fill(E2E_TEAM.password);
     await page.getByRole("button", { name: "Sign in as team" }).click();
     await page.waitForURL("**/team");
     await expect(page.locator("h1")).toContainText(E2E_TEAM.name);
@@ -51,6 +41,24 @@ test.describe("team login", () => {
 });
 
 test.describe("admin login", () => {
+  test("wrong password and a nonexistent identifier show the identical generic error", async ({
+    page,
+  }) => {
+    await page.goto("/login");
+    await page.getByRole("tab", { name: "Administrator" }).click();
+    await page.getByLabel("Email or admin username").fill(E2E_ADMIN.identifier);
+    await page.getByLabel("Password", { exact: true }).fill("definitely-wrong");
+    await page.getByRole("button", { name: "Sign in as administrator" }).click();
+    await expect(page.getByText("Invalid email/username or password.")).toBeVisible();
+
+    await page.goto("/login");
+    await page.getByRole("tab", { name: "Administrator" }).click();
+    await page.getByLabel("Email or admin username").fill("no-such-admin@example.com");
+    await page.getByLabel("Password", { exact: true }).fill("whatever12345");
+    await page.getByRole("button", { name: "Sign in as administrator" }).click();
+    await expect(page.getByText("Invalid email/username or password.")).toBeVisible();
+  });
+
   test("a correct login reaches /admin and an admin session cannot reach /team", async ({
     page,
   }) => {
@@ -67,5 +75,18 @@ test.describe("admin login", () => {
 
     await page.getByRole("button", { name: "Log out" }).click();
     await page.waitForURL("**/login");
+  });
+});
+
+test.describe("team registration", () => {
+  test("registering a new team signs it in immediately, no password asked", async ({ page }) => {
+    const code = `E2E-REG-${Date.now()}`;
+    await page.goto("/register");
+    await page.getByLabel("Team name").fill("E2E Registered Team");
+    await page.getByLabel("Team code (used to log in)").fill(code);
+    await expect(page.getByLabel(/password/i)).toHaveCount(0);
+    await page.getByRole("button", { name: "Register team" }).click();
+    await page.waitForURL("**/team");
+    await expect(page.locator("h1")).toContainText("E2E Registered Team");
   });
 });

@@ -1,0 +1,8 @@
+# Force LF line endings for files that run inside Linux containers or
+# are otherwise interpreted by a shebang, regardless of the platform
+# (and Git core.autocrlf setting) used to check the repo out. CRLF
+# here breaks the shebang line (e.g. "#!/bin/sh\r") and produces a
+# misleading "no such file or directory" from the container runtime.
+*.sh text eol=lf
+Dockerfile text eol=lf
+docker-entrypoint.sh text eol=lf

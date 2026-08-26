@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef, useEffect, useState } from "react";
+import { useActionState, useRef, useEffect } from "react";
 import { Field } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
 import { createScoringRuleAction, type ScoringFormState } from "@/app/admin/scoring/actions";
@@ -12,6 +12,9 @@ interface Option {
 
 const initialState: ScoringFormState = {};
 
+// Only Round 2 is scored — see recalculateRoundAction, which is
+// hardcoded to "round-2". roundNumber is a fixed hidden field rather
+// than a choice.
 export function AddScoringRuleForm({
   scoringModelVersionId,
   customers,
@@ -25,7 +28,6 @@ export function AddScoringRuleForm({
 }) {
   const [state, formAction, pending] = useActionState(createScoringRuleAction, initialState);
   const formRef = useRef<HTMLFormElement>(null);
-  const [roundNumber, setRoundNumber] = useState("1");
 
   useEffect(() => {
     if (state.success) formRef.current?.reset();
@@ -39,23 +41,8 @@ export function AddScoringRuleForm({
       noValidate
     >
       <input type="hidden" name="scoringModelVersionId" value={scoringModelVersionId} />
+      <input type="hidden" name="roundNumber" value="2" />
       <h3 className="col-span-full text-lg font-bold text-brand-950">Add a rule</h3>
-
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="roundNumber" className="text-sm font-medium text-brand-900">
-          Round
-        </label>
-        <select
-          id="roundNumber"
-          name="roundNumber"
-          value={roundNumber}
-          onChange={(e) => setRoundNumber(e.target.value)}
-          className="rounded-md border border-slate-300 bg-white px-3 py-2 text-brand-950 shadow-sm"
-        >
-          <option value="1">Round 1</option>
-          <option value="2">Round 2</option>
-        </select>
-      </div>
 
       <div className="flex flex-col gap-1.5">
         <label htmlFor="ruleType" className="text-sm font-medium text-brand-900">
@@ -100,32 +87,28 @@ export function AddScoringRuleForm({
         </select>
       </div>
 
-      {roundNumber === "2" ? (
-        <>
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="technicalSolutionId" className="text-sm font-medium text-brand-900">
-              Technical solution <span className="font-normal text-brand-700">(optional)</span>
-            </label>
-            <select id="technicalSolutionId" name="technicalSolutionId" defaultValue="" className="rounded-md border border-slate-300 bg-white px-3 py-2 text-brand-950 shadow-sm">
-              <option value="">Any</option>
-              {technicalSolutions.map((o) => (
-                <option key={o.id} value={o.id}>{o.name}</option>
-              ))}
-            </select>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="commercialModelId" className="text-sm font-medium text-brand-900">
-              Commercial model <span className="font-normal text-brand-700">(optional)</span>
-            </label>
-            <select id="commercialModelId" name="commercialModelId" defaultValue="" className="rounded-md border border-slate-300 bg-white px-3 py-2 text-brand-950 shadow-sm">
-              <option value="">Any</option>
-              {commercialModels.map((o) => (
-                <option key={o.id} value={o.id}>{o.name}</option>
-              ))}
-            </select>
-          </div>
-        </>
-      ) : null}
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="technicalSolutionId" className="text-sm font-medium text-brand-900">
+          Technical solution <span className="font-normal text-brand-700">(optional)</span>
+        </label>
+        <select id="technicalSolutionId" name="technicalSolutionId" defaultValue="" className="rounded-md border border-slate-300 bg-white px-3 py-2 text-brand-950 shadow-sm">
+          <option value="">Any</option>
+          {technicalSolutions.map((o) => (
+            <option key={o.id} value={o.id}>{o.name}</option>
+          ))}
+        </select>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="commercialModelId" className="text-sm font-medium text-brand-900">
+          Commercial model <span className="font-normal text-brand-700">(optional)</span>
+        </label>
+        <select id="commercialModelId" name="commercialModelId" defaultValue="" className="rounded-md border border-slate-300 bg-white px-3 py-2 text-brand-950 shadow-sm">
+          <option value="">Any</option>
+          {commercialModels.map((o) => (
+            <option key={o.id} value={o.id}>{o.name}</option>
+          ))}
+        </select>
+      </div>
 
       <Field label="External rule ID" name="externalRuleId" type="text" placeholder="optional" error={state.fieldErrors?.externalRuleId} />
       <div className="sm:col-span-2 lg:col-span-3">

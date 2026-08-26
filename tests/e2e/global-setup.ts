@@ -2,7 +2,17 @@ import { PrismaClient } from "@prisma/client";
 import { hashPassword } from "../../src/lib/auth/password";
 
 export const E2E_ADMIN = { identifier: "e2e-admin@example.com", password: "E2eAdminPass1!" };
-export const E2E_TEAM = { code: "E2ETEAM", name: "E2E Test Team", password: "E2eTeamPass1!" };
+// Teams have no password — the code alone is the credential (see
+// src/lib/data/teams.ts). This fixture team is pre-seeded (rather
+// than exercising /register) so the login spec has a stable,
+// deterministic account; registration itself would need its own spec.
+export const E2E_TEAM = { code: "E2ETEAM", name: "E2E Test Team" };
+
+// Any random value works here — never checked by team login, only
+// present to satisfy the shared, non-null User.passwordHash column.
+function unusablePasswordHash() {
+  return hashPassword(`e2e-unused-${crypto.randomUUID()}`);
+}
 
 export default async function globalSetup() {
   const prisma = new PrismaClient();
@@ -21,14 +31,14 @@ export default async function globalSetup() {
     if (existingTeam) {
       await prisma.user.update({
         where: { id: existingTeam.userId },
-        data: { passwordHash: await hashPassword(E2E_TEAM.password), active: true },
+        data: { active: true },
       });
       await prisma.team.update({ where: { id: existingTeam.id }, data: { active: true } });
     } else {
       const teamUser = await prisma.user.create({
         data: {
           loginIdentifier: E2E_TEAM.code,
-          passwordHash: await hashPassword(E2E_TEAM.password),
+          passwordHash: await unusablePasswordHash(),
           role: "TEAM",
         },
       });

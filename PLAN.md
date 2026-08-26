@@ -96,7 +96,10 @@ values).
 ## Non-goals for this pass
 - No invented scoring numbers — the app ships with zero active
   scoring rules; admins must enter values.
-- No public self-registration for either role.
+- No public self-registration for either role. **Superseded** — team
+  self-registration (no password; the team code is the sole
+  credential) was added afterwards at `/register`; see the amendment
+  note at the end of this file.
 - No client-only enforcement of anything security-relevant.
 
 ## Additional decisions made during implementation
@@ -158,3 +161,33 @@ values).
     rule silently failing validation with no field-level error
     surfaced anywhere in the UI. Fixed by having every such schema
     accept `null` explicitly, and added a regression test.
+
+## Amendment: self-service teams, Round-2-only scoring, draft revert
+Made after the initial pass, at the requester's request:
+- **Team self-registration replaces admin-created teams.** Teams pick
+  their own name + code at `/register` (public, no admin action) and
+  are signed in immediately. Teams have no password at all — the
+  `User.passwordHash` column is still populated (shared with admin
+  accounts, which do use a password) but with a random, never-issued,
+  never-checked value; team login (`loginTeamAction`) authenticates
+  purely by team code. `/admin/teams` keeps view/edit-name-or-code/
+  deactivate for admins but no longer creates accounts or resets
+  passwords (nothing to reset).
+  - Trade-off worth being explicit about: the team code is now the
+    *only* secret protecting a team's submissions, with no
+    rate-limiting on lookups (there is no password to lock out
+    against). This is an intentional simplicity-over-security choice
+    for this use case — acceptable for a low-stakes internal/workshop
+    simulation, not for anything where team codes must resist
+    guessing.
+- **Only Round 2 is scored.** `AddScoringRuleForm` no longer offers a
+  round choice (hardcoded to 2); `/admin/results`' recalculate action
+  is now typed to `"round-2"` only. The Round 1 rule-matching code
+  path (`computeRoundOneScores`, `roundOneRuleMatches`) is left intact
+  and unit-tested but is unreachable from the UI — Round 1 stays a
+  pure decision round (customer selection) with no scoring.
+- **An ACTIVE scoring model version can be reverted to DRAFT** from
+  its detail page, to edit rules again without archiving it. While no
+  version is ACTIVE, "Recalculate" refuses to run (existing behavior,
+  unchanged) — so results freeze at whatever was last calculated
+  until a version is (re-)activated.

@@ -26,7 +26,6 @@ export async function GET() {
   const header = [
     "Team",
     "Round 1 status",
-    "Round 1 score",
     "Round 2 status",
     "Round 2 score",
     "Manual adjustment total",
@@ -37,7 +36,6 @@ export async function GET() {
       [
         row.teamName,
         row.round1Status,
-        row.round1Score,
         row.round2Status,
         row.round2Score,
         adjustmentByTeam.get(row.teamId) ?? 0,

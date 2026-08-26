@@ -10,6 +10,7 @@ import {
   setScoringRuleActive,
   activateScoringModelVersion,
   archiveScoringModelVersion,
+  revertScoringModelVersionToDraft,
   ScoringRuleError,
 } from "@/lib/data/scoring";
 import {
@@ -139,6 +140,29 @@ export async function archiveScoringModelVersionAction(formData: FormData): Prom
     await writeAuditLog({
       userId: admin.userId,
       action: "SCORING_MODEL_VERSION_ARCHIVED",
+      entityType: "ScoringModelVersion",
+      entityId: version.id,
+    });
+  } catch {
+    // Invalid transition — ignore.
+  }
+
+  revalidatePath("/admin/scoring");
+  revalidatePath(`/admin/scoring/${parsed.data.scoringModelVersionId}`);
+}
+
+export async function revertScoringModelVersionToDraftAction(formData: FormData): Promise<void> {
+  const admin = await requireAdmin();
+  const parsed = versionIdActionSchema.safeParse({
+    scoringModelVersionId: formData.get("scoringModelVersionId"),
+  });
+  if (!parsed.success) return;
+
+  try {
+    const version = await revertScoringModelVersionToDraft(parsed.data.scoringModelVersionId);
+    await writeAuditLog({
+      userId: admin.userId,
+      action: "SCORING_MODEL_VERSION_REVERTED_TO_DRAFT",
       entityType: "ScoringModelVersion",
       entityId: version.id,
     });

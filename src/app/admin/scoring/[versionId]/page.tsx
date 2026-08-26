@@ -8,6 +8,7 @@ import { AddScoringRuleForm } from "@/components/admin/AddScoringRuleForm";
 import {
   activateScoringModelVersionAction,
   archiveScoringModelVersionAction,
+  revertScoringModelVersionToDraftAction,
   setScoringRuleActiveAction,
 } from "@/app/admin/scoring/actions";
 import type { BadgeTone } from "@/lib/status-labels";
@@ -47,6 +48,12 @@ export default async function ScoringVersionDetailPage({
             </form>
           ) : null}
           {version.status === "ACTIVE" ? (
+            <form action={revertScoringModelVersionToDraftAction}>
+              <input type="hidden" name="scoringModelVersionId" value={version.id} />
+              <Button type="submit" variant="secondary">Back to draft</Button>
+            </form>
+          ) : null}
+          {version.status === "ACTIVE" ? (
             <form action={archiveScoringModelVersionAction}>
               <input type="hidden" name="scoringModelVersionId" value={version.id} />
               <Button type="submit" variant="danger">Archive</Button>
@@ -62,6 +69,13 @@ export default async function ScoringVersionDetailPage({
           technicalSolutions={technicalSolutions}
           commercialModels={commercialModels}
         />
+      ) : version.status === "ACTIVE" ? (
+        <p className="rounded-md bg-status-locked-bg px-3 py-2 text-sm text-status-locked">
+          This version is ACTIVE. Rules can be changed again once
+          it&apos;s sent back to draft with &quot;Back to
+          draft&quot; — while no scoring model is active, scores
+          calculate to zero.
+        </p>
       ) : (
         <p className="rounded-md bg-status-locked-bg px-3 py-2 text-sm text-status-locked">
           Rules can only be added or changed while this version is in DRAFT.

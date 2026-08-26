@@ -1,10 +1,19 @@
 import "server-only";
+import { randomBytes } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth/password";
 import { destroyAllSessionsForUser } from "@/lib/auth/session";
 
-// Admin-only projections and mutations for Team accounts. Never
-// imported from any /team/** code path.
+// Team accounts are self-registered (see src/app/register) and never
+// use a password — teams authenticate with their team code alone
+// (see src/app/login/actions.ts). The User row still needs a non-null
+// passwordHash (shared column with admin accounts, which DO use a
+// password), so registration hashes a random, never-issued value that
+// is discarded immediately after — it can never be used to log in,
+// since the team-login path never checks it.
+function randomUnusablePassword(): string {
+  return randomBytes(24).toString("base64url");
+}
 
 export interface TeamListItem {
   id: string;
@@ -13,7 +22,6 @@ export interface TeamListItem {
   active: boolean;
   createdAt: Date;
   lastLoginAt: Date | null;
-  locked: boolean;
 }
 
 export async function listTeamsForAdmin(): Promise<TeamListItem[]> {
@@ -25,10 +33,9 @@ export async function listTeamsForAdmin(): Promise<TeamListItem[]> {
       code: true,
       active: true,
       createdAt: true,
-      user: { select: { lastLoginAt: true, lockedUntil: true } },
+      user: { select: { lastLoginAt: true } },
     },
   });
-  const now = Date.now();
   return teams.map((team) => ({
     id: team.id,
     name: team.name,
@@ -36,7 +43,6 @@ export async function listTeamsForAdmin(): Promise<TeamListItem[]> {
     active: team.active,
     createdAt: team.createdAt,
     lastLoginAt: team.user.lastLoginAt,
-    locked: !!team.user.lockedUntil && team.user.lockedUntil.getTime() > now,
   }));
 }
 
@@ -49,13 +55,14 @@ export async function getTeamForAdmin(teamId: string) {
       code: true,
       active: true,
       userId: true,
-      user: { select: { lastLoginAt: true, lockedUntil: true, failedLoginCount: true } },
+      user: { select: { lastLoginAt: true } },
     },
   });
 }
 
-export async function createTeam(input: { name: string; code: string; password: string }) {
-  const passwordHash = await hashPassword(input.password);
+/** Used by self-registration (no admin actor involved). */
+export async function createTeam(input: { name: string; code: string }) {
+  const passwordHash = await hashPassword(randomUnusablePassword());
   return prisma.$transaction(async (tx) => {
     const user = await tx.user.create({
       data: { loginIdentifier: input.code, passwordHash, role: "TEAM" },
@@ -92,17 +99,5 @@ export async function setTeamActive(teamId: string, active: boolean) {
     // Immediately revoke any live sessions for a deactivated team.
     await destroyAllSessionsForUser(team.userId);
   }
-  return team;
-}
-
-export async function resetTeamPassword(teamId: string, newPassword: string) {
-  const team = await prisma.team.findUniqueOrThrow({ where: { id: teamId } });
-  const passwordHash = await hashPassword(newPassword);
-  await prisma.user.update({
-    where: { id: team.userId },
-    data: { passwordHash, failedLoginCount: 0, lockedUntil: null },
-  });
-  // Force re-authentication with the new password.
-  await destroyAllSessionsForUser(team.userId);
   return team;
 }
